@@ -16,7 +16,7 @@ class DataProvider(object):
     """Generic data provider."""
 
     def __init__(self, inputs, targets, batch_size, max_num_batches=-1,
-                 shuffle_order=True, rng=None):
+                 shuffle_order=True, rng=None):        
         """Create a new data provider object.
 
         Args:
@@ -95,7 +95,7 @@ class MNISTDataProvider(DataProvider):
     """Data provider for MNIST handwritten digit images."""
 
     def __init__(self, which_set='train', batch_size=100, max_num_batches=-1,
-                 shuffle_order=True, rng=None):
+                 shuffle_order=True, rng=None):        
         """Create a new MNIST data provider object.
 
         Args:
@@ -114,7 +114,7 @@ class MNISTDataProvider(DataProvider):
         assert which_set in ['train', 'valid', 'eval'], (
             'Expected which_set to be either train, valid or eval. '
             'Got {0}'.format(which_set)
-        )
+        )        
         self.which_set = which_set
         self.num_classes = 10
         # construct path to data using os.path.join to ensure the correct path
@@ -133,11 +133,11 @@ class MNISTDataProvider(DataProvider):
         super(MNISTDataProvider, self).__init__(
             inputs, targets, batch_size, max_num_batches, shuffle_order, rng)
 
-    # def next(self):
-    #    """Returns next data batch or raises `StopIteration` if at end."""
-    #    inputs_batch, targets_batch = super(MNISTDataProvider, self).next()
-    #    return inputs_batch, self.to_one_of_k(targets_batch)
-    #
+    def next(self):
+        """Returns next data batch or raises `StopIteration` if at end."""
+        inputs_batch, targets_batch = super(MNISTDataProvider, self).next()
+        return inputs_batch, self.to_one_of_k(targets_batch)
+    
     def __next__(self):
         return self.next()
 
@@ -155,8 +155,9 @@ class MNISTDataProvider(DataProvider):
             (num_data, num_classes) where for each row all elements are equal
             to zero except for the column corresponding to the correct class
             which is equal to one.
-        """
-        raise NotImplementedError()
+        """        
+        return np.identity(len(int_targets))
+            
 
 
 class MetOfficeDataProvider(DataProvider):
@@ -189,18 +190,33 @@ class MetOfficeDataProvider(DataProvider):
         )
         # load raw data from text file
         # ...
+        data_path = os.path.join(os.environ['MLP_DATA_DIR'], 'HadSSP_daily_qc.txt')
+        assert os.path.isfile(data_path), (
+            'Data file does not exist at expected path: ' + data_path
+        )
+        raw = np.loadtxt(data_path, skiprows=3)
         # filter out all missing datapoints and flatten to a vector
-        # ...
+        days_records = raw[:,2:]        
+        valid_records = days_records[days_records != -99.99]
         # normalise data to zero mean, unit standard deviation
         # ...
+        normalized = (valid_records - min(valid_records))/(max(valid_records) - min(valid_records))
         # convert from flat sequence to windowed data
-        # ...
+        mod = len(normalized) % window_size        
+        avg = np.mean(normalized)
+        
+        if mod != 0:        
+            ones = np.ones(window_size - mod) * avg        
+            normalized = np.append(normalized, ones)
+        
+        cols, rows = window_size, int(len(normalized) / window_size)
+        normalized = normalized.reshape((rows, cols))
         # inputs are first (window_size - 1) entries in windows
-        # inputs = ...
+        inputs = normalized[:, :-1]
         # targets are last entry in windows
-        # targets = ...
+        targets = normalized[:, -1]
         # initialise base class with inputs and targets arrays
-        # super(MetOfficeDataProvider, self).__init__(
-        #     inputs, targets, batch_size, max_num_batches, shuffle_order, rng)
+        super(MetOfficeDataProvider, self).__init__(
+            inputs, targets, batch_size, max_num_batches, shuffle_order, rng)
     def __next__(self):
             return self.next()
