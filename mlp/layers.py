@@ -323,7 +323,9 @@ class LeakyReluLayer(Layer):
 
         For inputs `x` and outputs `y` this corresponds to `y = max(0, x)`.
         """
-        outputs = inputs #remove and replace with your code
+        alpha = 0.01 # Set as per the coursework instructions
+        outputs = np.copy(inputs) #remove and replace with your code
+        outputs[outputs <= 0] = outputs[outputs <= 0] * alpha
         return outputs
 
     def bprop(self, inputs, outputs, grads_wrt_outputs):
@@ -332,8 +334,10 @@ class LeakyReluLayer(Layer):
         Given gradients with respect to the outputs of the layer calculates the
         gradients with respect to the layer inputs.
         """
-        gradients = inputs #remove and replace with your code
-        return gradients
+        deriv = np.ones(outputs.shape, dtype=float)
+        deriv[outputs <= 0] = 0.01
+
+        return deriv * grads_wrt_outputs
 
     def __repr__(self):
         return 'LeakyReluLayer'
@@ -346,7 +350,9 @@ class ELULayer(Layer):
 
         For inputs `x` and outputs `y` this corresponds to `y = max(0, x)`.
         """
-        outputs = inputs #remove and replace with your code
+        alpha = 1. # Set as per the coursework instructions
+        outputs = np.copy(inputs) #remove and replace with your code
+        outputs[outputs <= 0] = (np.exp(outputs[outputs <= 0]) - 1) * alpha
         return outputs
 
     def bprop(self, inputs, outputs, grads_wrt_outputs):
@@ -355,8 +361,11 @@ class ELULayer(Layer):
         Given gradients with respect to the outputs of the layer calculates the
         gradients with respect to the layer inputs.
         """
-        gradients = inputs #remove and replace with your code
-        return gradients
+        alpha = 1. # Set as per the coursework instructions
+        deriv = np.ones(outputs.shape, dtype=float)
+        deriv[outputs <= 0] = outputs[outputs <= 0] + alpha
+
+        return deriv * grads_wrt_outputs
 
     def __repr__(self):
         return 'ELULayer'
@@ -370,8 +379,11 @@ class SELULayer(Layer):
 
         For inputs `x` and outputs `y` this corresponds to `y = max(0, x)`.
         """
-        outputs = inputs #remove and replace with your code
-        return outputs
+        alpha = 1.6733 # Set as per the coursework instructions
+        lambd = 1.0507 # Set as per the coursework instructions
+        outputs = np.copy(inputs) #remove and replace with your code
+        outputs[outputs <= 0] = (np.exp(outputs[outputs <= 0]) - 1) * alpha
+        return outputs * lambd
 
     def bprop(self, inputs, outputs, grads_wrt_outputs):
         """Back propagates gradients through a layer.
@@ -379,8 +391,13 @@ class SELULayer(Layer):
         Given gradients with respect to the outputs of the layer calculates the
         gradients with respect to the layer inputs.
         """
-        gradients = inputs #remove and replace with your code
-        return gradients
+        alpha = 1.6733 # Set as per the coursework instructions
+        lambd = 1.0507 # Set as per the coursework instructions
+        deriv = np.ones(outputs.shape, dtype=float)
+        deriv[outputs <= 0] = outputs[outputs <= 0] + (alpha * lambd)
+        deriv[outputs > 0] = lambd
+
+        return deriv * grads_wrt_outputs
 
     def __repr__(self):
         return 'SELULayer'
