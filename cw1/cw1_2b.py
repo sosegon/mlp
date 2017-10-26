@@ -106,10 +106,10 @@ def activation_network(train_data, valid_data, weights_init, hyper, n_layers, fi
             layers.append(AffineLayer(input_dim, hidden_dim, weights_init, biases_init))
             layers.append(SELULayer())            
         elif i > 1:
-            layers.append(AffineLayer(hidden_dim, hidden_dim))
+            layers.append(AffineLayer(hidden_dim, hidden_dim, weights_init, biases_init))
             layers.append(SELULayer())
     
-    layers.append(AffineLayer(hidden_dim, output_dim))
+    layers.append(AffineLayer(hidden_dim, output_dim, weights_init, biases_init))
 
     model = MultipleLayerModel(layers)
 
