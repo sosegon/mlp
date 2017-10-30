@@ -172,7 +172,7 @@ def train_networks(prefix, hyper, h_layers, initializer="gui"):
 parser = argparse.ArgumentParser(description='Train NN with different activations')
 parser.add_argument('name', type=str, help="Name of the experiment")
 parser.add_argument('-b', dest='batch_size', type=int, default=50)
-parser.add_argument('-l', dest='learning_rate', type=float, default=0.05)
+parser.add_argument('-l', dest='learning_rate', type=float, default=0.001)
 parser.add_argument('-n', dest='num_epochs', type=int, default=100)
 parser.add_argument('-i', dest='init', type=str, default="gui")
 parser.add_argument('-hl', dest='h_layers', type=int, default=2)
