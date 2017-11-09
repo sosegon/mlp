@@ -4,7 +4,7 @@ plt.style.use('ggplot')
 
 import numpy as np
 import logging
-from mlp.data_providers import MNISTDataProvider
+from mlp.data_providers import MNISTDataProvider, AugmentedMNISTDataProvider
 
 from mlp.layers import AffineLayer, SoftmaxLayer, SigmoidLayer, ReluLayer
 from mlp.errors import CrossEntropySoftmaxError
@@ -16,94 +16,30 @@ from time import time
 
 import argparse
 
-class L1Penalty(object):
-    """L1 parameter penalty.
-    
-    Term to add to the objective function penalising parameters
-    based on their L1 norm.
-    """
-    
-    def __init__(self, coefficient):
-        """Create a new L1 penalty object.
-        
-        Args:
-            coefficient: Positive constant to scale penalty term by.
-        """
-        assert coefficient > 0., 'Penalty coefficient must be positive.'
-        self.coefficient = coefficient
-        
-    def __call__(self, parameter):
-        """Calculate L1 penalty value for a parameter.
-        
-        Args:
-            parameter: Array corresponding to a model parameter.
-            
-        Returns:
-            Value of penalty term.
-        """
-        return np.abs(parameter.ravel()).sum() * self.coefficient
-        
-    def grad(self, parameter):
-        """Calculate the penalty gradient with respect to the parameter.
-        
-        Args:
-            parameter: Array corresponding to a model parameter.
-            
-        Returns:
-            Value of penalty gradient with respect to parameter. This
-            should be an array of the same shape as the parameter.
-        """
-        output = np.copy(parameter)
-        output[output < 0] = -1
-        output[output > 0] = 1
-        return self.coefficient * output
-    
-    def __repr__(self):
-        return 'L1Penalty({0})'.format(self.coefficient)
-        
+from scipy.ndimage.interpolation import rotate
 
-class L2Penalty(object):
-    """L1 parameter penalty.
+def random_rotation(inputs, rng):
+    """Randomly rotates a subset of images in a batch.
     
-    Term to add to the objective function penalising parameters
-    based on their L2 norm.
+    Args:
+        inputs: Input image batch, an array of shape (batch_size, 784).
+        rng: A seeded random number generator.
+        
+    Returns:
+        An array of shape (batch_size, 784) corresponding to a copy
+        of the original `inputs` array with the randomly selected
+        images rotated by a random angle. The original `inputs`
+        array should not be modified.
     """
-
-    def __init__(self, coefficient):
-        """Create a new L2 penalty object.
-        
-        Args:
-            coefficient: Positive constant to scale penalty term by.
-        """
-        assert coefficient > 0., 'Penalty coefficient must be positive.'
-        self.coefficient = coefficient
-        
-    def __call__(self, parameter):
-        """Calculate L2 penalty value for a parameter.
-        
-        Args:
-            parameter: Array corresponding to a model parameter.
-            
-        Returns:
-            Value of penalty term.
-        """
-        return (parameter.ravel()**2).sum() * self.coefficient / 2
-        
-    def grad(self, parameter):
-        """Calculate the penalty gradient with respect to the parameter.
-        
-        Args:
-            parameter: Array corresponding to a model parameter.
-            
-        Returns:
-            Value of penalty gradient with respect to parameter. This
-        raise NotImplementedError()
-            should be an array of the same shape as the parameter.
-        """
-        return self.coefficient * parameter
+    random_angles = rng.normal(0, 15, inputs.shape[0])
+    outputs = np.copy(inputs)
     
-    def __repr__(self):
-        return 'L2Penalty({0})'.format(self.coefficient)
+    
+    for idx, angle in enumerate(random_angles):
+        elem = outputs[idx].reshape(28, 28) 
+        outputs[idx] = rotate(elem, angle, reshape=False).ravel()
+        
+    return outputs
 
 def write_to_log_file(log_file_name, header, keys, stats):
     with open(log_file_name, "w+") as log_file:
@@ -257,19 +193,16 @@ def train_networks(hyper):
     logger.handlers = [logging.StreamHandler()]
 
     # Create data provider objects for the MNIST data set
-    train_data = MNISTDataProvider('train', batch_size=batch_size, rng=rng)
+    train_data = AugmentedMNISTDataProvider('train', batch_size=batch_size, rng=rng, transformer=random_rotation)
     valid_data = MNISTDataProvider('valid', batch_size=batch_size, rng=rng)
 
     train_data.inputs = normalize_data(train_data.inputs)
     valid_data.inputs = normalize_data(valid_data.inputs)
 
-    network(train_data, valid_data, hyper, rng, None, None, "lab5_exp0")
-    network(train_data, valid_data, hyper, rng, L1Penalty(1e-5), L1Penalty(1e-5), "lab5_exp1_l1")
-    network(train_data, valid_data, hyper, rng, L1Penalty(1e-3), L1Penalty(1e-3), "lab5_exp2_l1")
-    network(train_data, valid_data, hyper, rng, L2Penalty(1e-4), L2Penalty(1e-4), "lab5_exp3_l2")
-    network(train_data, valid_data, hyper, rng, L2Penalty(1e-2), L2Penalty(1e-2), "lab5_exp4_l2")
+    network(train_data, valid_data, hyper, rng, None, None, "lab5_exp5")
+    
 
-parser = argparse.ArgumentParser(description='Train NN with different regularisations')
+parser = argparse.ArgumentParser(description='Train NN with augmented data')
 parser.add_argument('-b', dest='batch_size', type=int, default=50)
 parser.add_argument('-l', dest='learning_rate', type=float, default=0.01)
 parser.add_argument('-n', dest='num_epochs', type=int, default=100)
