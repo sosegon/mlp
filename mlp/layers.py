@@ -95,10 +95,52 @@ class LayerWithParameters(Layer):
         """
         raise NotImplementedError()
 
+class StochasticLayer(Layer):
+    """Specialised layer which uses a stochastic forward propagation."""
+
+    def __init__(self, rng=None):
+        """Constructs a new StochasticLayer object.
+        Args:
+            rng (RandomState): Seeded random number generator object.
+        """
+        if rng is None:
+            rng = np.random.RandomState(DEFAULT_SEED)
+        self.rng = rng
+
+    def fprop(self, inputs, stochastic=True):
+        """Forward propagates activations through the layer transformation.
+        Args:
+            inputs: Array of layer inputs of shape (batch_size, input_dim).
+            stochastic: Flag allowing different deterministic
+                forward-propagation mode in addition to default stochastic
+                forward-propagation e.g. for use at test time. If False
+                a deterministic forward-propagation transformation
+                corresponding to the expected output of the stochastic
+                forward-propagation is applied.
+        Returns:
+            outputs: Array of layer outputs of shape (batch_size, output_dim).
+        """
+        raise NotImplementedError()
+
+    def bprop(self, inputs, outputs, grads_wrt_outputs):
+        """Back propagates gradients through a layer.
+        Given gradients with respect to the outputs of the layer calculates the
+        gradients with respect to the layer inputs. This should correspond to
+        default stochastic forward-propagation.
+        Args:
+            inputs: Array of layer inputs of shape (batch_size, input_dim).
+            outputs: Array of layer outputs calculated in forward pass of
+                shape (batch_size, output_dim).
+            grads_wrt_outputs: Array of gradients with respect to the layer
+                outputs of shape (batch_size, output_dim).
+        Returns:
+            Array of gradients with respect to the layer inputs of shape
+            (batch_size, input_dim).
+        """
+        raise NotImplementedError()
 
 class AffineLayer(LayerWithParameters):
     """Layer implementing an affine tranformation of its inputs.
-
     This layer is parameterised by a weight matrix and bias vector.
     """
 
@@ -107,7 +149,6 @@ class AffineLayer(LayerWithParameters):
                  biases_initialiser=init.ConstantInit(0.),
                  weights_penalty=None, biases_penalty=None):
         """Initialises a parameterised affine layer.
-
         Args:
             input_dim (int): Dimension of inputs to the layer.
             output_dim (int): Dimension of the layer outputs.
@@ -127,13 +168,10 @@ class AffineLayer(LayerWithParameters):
 
     def fprop(self, inputs):
         """Forward propagates activations through the layer transformation.
-
         For inputs `x`, outputs `y`, weights `W` and biases `b` the layer
         corresponds to `y = W.dot(x) + b`.
-
         Args:
             inputs: Array of layer inputs of shape (batch_size, input_dim).
-
         Returns:
             outputs: Array of layer outputs of shape (batch_size, output_dim).
         """
@@ -141,17 +179,14 @@ class AffineLayer(LayerWithParameters):
 
     def bprop(self, inputs, outputs, grads_wrt_outputs):
         """Back propagates gradients through a layer.
-
         Given gradients with respect to the outputs of the layer calculates the
         gradients with respect to the layer inputs.
-
         Args:
             inputs: Array of layer inputs of shape (batch_size, input_dim).
             outputs: Array of layer outputs calculated in forward pass of
                 shape (batch_size, output_dim).
             grads_wrt_outputs: Array of gradients with respect to the layer
                 outputs of shape (batch_size, output_dim).
-
         Returns:
             Array of gradients with respect to the layer inputs of shape
             (batch_size, input_dim).
@@ -160,12 +195,10 @@ class AffineLayer(LayerWithParameters):
 
     def grads_wrt_params(self, inputs, grads_wrt_outputs):
         """Calculates gradients with respect to layer parameters.
-
         Args:
             inputs: array of inputs to layer of shape (batch_size, input_dim)
             grads_wrt_to_outputs: array of gradients with respect to the layer
                 outputs of shape (batch_size, output_dim)
-
         Returns:
             list of arrays of gradients with respect to the layer parameters
             `[grads_wrt_weights, grads_wrt_biases]`.
@@ -184,7 +217,6 @@ class AffineLayer(LayerWithParameters):
 
     def params_penalty(self):
         """Returns the parameter dependent penalty term for this layer.
-
         If no parameter-dependent penalty terms are set this returns zero.
         """
         params_penalty = 0
@@ -248,6 +280,134 @@ class SigmoidLayer(Layer):
     def __repr__(self):
         return 'SigmoidLayer'
 
+
+class TanhLayer(Layer):
+    """Layer implementing an element-wise hyperbolic tangent transformation."""
+
+    def fprop(self, inputs):
+        """Forward propagates activations through the layer transformation.
+
+        For inputs `x` and outputs `y` this corresponds to `y = tanh(x)`.
+        """
+        return np.tanh(inputs)
+
+    def bprop(self, inputs, outputs, grads_wrt_outputs):
+        """Back propagates gradients through a layer.
+
+        Given gradients with respect to the outputs of the layer calculates the
+        gradients with respect to the layer inputs.
+        """
+        return (1. - outputs ** 2) * grads_wrt_outputs
+
+    def __repr__(self):
+        return 'TanhLayer'
+
+class ReluLayer(Layer):
+    """Layer implementing an element-wise rectified linear transformation."""
+
+    def fprop(self, inputs):
+        """Forward propagates activations through the layer transformation.
+
+        For inputs `x` and outputs `y` this corresponds to `y = max(0, x)`.
+        """
+        return np.maximum(inputs, 0.)
+
+    def bprop(self, inputs, outputs, grads_wrt_outputs):
+        """Back propagates gradients through a layer.
+
+        Given gradients with respect to the outputs of the layer calculates the
+        gradients with respect to the layer inputs.
+        """
+        return (outputs > 0) * grads_wrt_outputs
+
+    def __repr__(self):
+        return 'ReluLayer'
+
+class LeakyReluLayer(Layer):
+    """Layer implementing an element-wise leaky rectified linear transformation."""
+    def fprop(self, inputs):
+        """Forward propagates activations through the layer transformation.
+
+        For inputs `x` and outputs `y` this corresponds to `y = max(0, x)`.
+        """
+        alpha = 0.01 # Set as per the coursework instructions
+        outputs = np.copy(inputs) #remove and replace with your code
+        outputs[outputs <= 0] = outputs[outputs <= 0] * alpha
+        return outputs
+
+    def bprop(self, inputs, outputs, grads_wrt_outputs):
+        """Back propagates gradients through a layer.
+
+        Given gradients with respect to the outputs of the layer calculates the
+        gradients with respect to the layer inputs.
+        """
+        deriv = np.ones(outputs.shape, dtype=float)
+        deriv[outputs <= 0] = 0.01
+
+        return deriv * grads_wrt_outputs
+
+    def __repr__(self):
+        return 'LeakyReluLayer'
+
+class ELULayer(Layer):
+    """Layer implementing an ELU activation."""
+
+    def fprop(self, inputs):
+        """Forward propagates activations through the layer transformation.
+
+        For inputs `x` and outputs `y` this corresponds to `y = max(0, x)`.
+        """
+        alpha = 1. # Set as per the coursework instructions
+        outputs = np.copy(inputs) #remove and replace with your code
+        outputs[outputs <= 0] = (np.exp(outputs[outputs <= 0]) - 1) * alpha
+        return outputs
+
+    def bprop(self, inputs, outputs, grads_wrt_outputs):
+        """Back propagates gradients through a layer.
+
+        Given gradients with respect to the outputs of the layer calculates the
+        gradients with respect to the layer inputs.
+        """
+        alpha = 1. # Set as per the coursework instructions
+        deriv = np.ones(outputs.shape, dtype=float)
+        deriv[outputs <= 0] = outputs[outputs <= 0] + alpha
+
+        return deriv * grads_wrt_outputs
+
+    def __repr__(self):
+        return 'ELULayer'
+
+class SELULayer(Layer):
+    """Layer implementing a Self Normalizing ELU."""
+    #α01 ≈ 1.6733 and λ01 ≈ 1.0507
+
+    def fprop(self, inputs):
+        """Forward propagates activations through the layer transformation.
+
+        For inputs `x` and outputs `y` this corresponds to `y = max(0, x)`.
+        """
+        alpha = 1.6733 # Set as per the coursework instructions
+        lambd = 1.0507 # Set as per the coursework instructions
+        outputs = np.copy(inputs) #remove and replace with your code
+        outputs[outputs <= 0] = (np.exp(outputs[outputs <= 0]) - 1) * alpha
+        return outputs * lambd
+
+    def bprop(self, inputs, outputs, grads_wrt_outputs):
+        """Back propagates gradients through a layer.
+
+        Given gradients with respect to the outputs of the layer calculates the
+        gradients with respect to the layer inputs.
+        """
+        alpha = 1.6733 # Set as per the coursework instructions
+        lambd = 1.0507 # Set as per the coursework instructions
+        deriv = np.ones(outputs.shape, dtype=float)
+        deriv[outputs <= 0] = outputs[outputs <= 0] + (alpha * lambd)
+        deriv[outputs > 0] = lambd
+
+        return deriv * grads_wrt_outputs
+
+    def __repr__(self):
+        return 'SELULayer'
 
 class SoftmaxLayer(Layer):
     """Layer implementing a softmax transformation."""

@@ -43,6 +43,48 @@ class UniformInit(object):
     def __call__(self, shape):
         return self.rng.uniform(low=self.low, high=self.high, size=shape)
 
+class UniformFanInInit(object):
+    """Random uniform parameter initialiser."""
+
+    def __init__(self, low=-.1, high=.1, rng=None):
+        """Construct a random uniform parameter initialiser.
+
+        Args:
+            low: Lower bound of interval to sample from.
+            high: Upper bound of interval to sample from.
+            rng (RandomState): Seeded random number generator.
+        """
+        self.low = low
+        self.high = high
+        if rng is None:
+            rng = np.random.RandomState(DEFAULT_SEED)
+        self.rng = rng
+
+    def __call__(self, shape):
+        lim = np.sqrt(3. / shape[1])
+        return self.rng.uniform(low=-lim, high=lim, size=shape)
+
+class UniformFanOutInit(object):
+    """Random uniform parameter initialiser."""
+
+    def __init__(self, low=-.1, high=.1, rng=None):
+        """Construct a random uniform parameter initialiser.
+
+        Args:
+            low: Lower bound of interval to sample from.
+            high: Upper bound of interval to sample from.
+            rng (RandomState): Seeded random number generator.
+        """
+        self.low = low
+        self.high = high
+        if rng is None:
+            rng = np.random.RandomState(DEFAULT_SEED)
+        self.rng = rng
+
+    def __call__(self, shape):
+        lim = np.sqrt(3. / shape[0])
+        return self.rng.uniform(low=-lim, high=lim, size=shape)
+
 
 class NormalInit(object):
     """Random normal parameter initialiser."""
@@ -64,9 +106,24 @@ class NormalInit(object):
     def __call__(self, shape):
         return self.rng.normal(loc=self.mean, scale=self.std, size=shape)
 
+class SELUInit(object):
+    """SELU Initializer."""
+    def __init__(self, rng=None):
+        """Construct a random uniform parameter initialiser.
+
+        Args:
+            rng (RandomState): Seeded random number generator.
+        """
+        if rng is None:
+            rng = np.random.RandomState(DEFAULT_SEED)
+        self.rng = rng
+
+    def __call__(self, shape):
+        std = 1/shape[0]
+        return self.rng.normal(loc=0, scale=std, size=shape)
+
 class GlorotUniformInit(object):
     """Glorot and Bengio (2010) random uniform weights initialiser.
-
     Initialises an two-dimensional parameter array using the 'normalized
     initialisation' scheme suggested in [1] which attempts to maintain a
     roughly constant variance in the activations and backpropagated gradients
@@ -85,7 +142,6 @@ class GlorotUniformInit(object):
 
     def __init__(self, gain=1., rng=None):
         """Construct a normalised initilisation random initialiser object.
-
         Args:
             gain: Multiplicative factor to scale initialised weights by.
                 Recommended values is 1 for affine layers followed by
@@ -107,7 +163,6 @@ class GlorotUniformInit(object):
 
 class GlorotNormalInit(object):
     """Glorot and Bengio (2010) random normal weights initialiser.
-
     Initialises an two-dimensional parameter array using the 'normalized
     initialisation' scheme suggested in [1] which attempts to maintain a
     roughly constant variance in the activations and backpropagated gradients
@@ -126,7 +181,6 @@ class GlorotNormalInit(object):
 
     def __init__(self, gain=1., rng=None):
         """Construct a normalised initilisation random initialiser object.
-
         Args:
             gain: Multiplicative factor to scale initialised weights by.
                 Recommended values is 1 for affine layers followed by
