@@ -4,7 +4,7 @@ from mlp.layers import AffineLayer, ReluLayer,DropoutLayer
 from mlp.errors import CrossEntropySoftmaxError
 from mlp.models import MultipleLayerModel
 from mlp.initialisers import ConstantInit, GlorotUniformInit
-from mlp.learning_rules import GradientDescentLearningRule, MomentumLearningRule
+from mlp.learning_rules import GradientDescentLearningRule
 from collections import OrderedDict
 import numpy as np
 
@@ -16,8 +16,7 @@ seed=10102016
 
 def network_dropout(num_epochs):
     hyper = OrderedDict()
-    hyper["learning_rate"] = 0.02
-    hyper["momentum_coeff"] = 0.09
+    hyper["learning_rate"] = 0.001
     hyper["dropout_prob"] = 0.5
     hyper["batch_size"] = 50
     hyper["num_epochs"] = num_epochs
@@ -42,7 +41,7 @@ def network_dropout(num_epochs):
 
     error = CrossEntropySoftmaxError()
     
-    learning_rule = MomentumLearningRule(hyper["learning_rate"], hyper["momentum_coeff"])
+    learning_rule = GradientDescentLearningRule(hyper["learning_rate"])
 
     train_data, valid_data, test_data = load_data(rng, batch_size=hyper["batch_size"])
 
@@ -60,8 +59,7 @@ def network_dropout(num_epochs):
 
 def network_regularization(num_epochs):
     hyper = OrderedDict()
-    hyper["learning_rate"] = 0.02
-    hyper["momentum_coeff"] = 0.09
+    hyper["learning_rate"] = 0.001
     hyper["l2_coeff"] = 1e-2
     hyper["batch_size"] = 50
     hyper["num_epochs"] = num_epochs
@@ -92,7 +90,7 @@ def network_regularization(num_epochs):
 
     error = CrossEntropySoftmaxError()
     
-    learning_rule = MomentumLearningRule(hyper["learning_rate"], hyper["momentum_coeff"])
+    learning_rule = GradientDescentLearningRule(hyper["learning_rate"])
 
     train_data, valid_data, test_data = load_data(rng, batch_size=hyper["batch_size"])
 
@@ -110,8 +108,7 @@ def network_regularization(num_epochs):
 
 def network_hog(num_epochs):
     hyper = OrderedDict()
-    hyper["learning_rate"] = 0.02
-    hyper["momentum_coeff"] = 0.09
+    hyper["learning_rate"] = 0.001
     hyper["batch_size"] = 50
     hyper["num_epochs"] = num_epochs
 
@@ -132,7 +129,7 @@ def network_hog(num_epochs):
 
     error = CrossEntropySoftmaxError()
     
-    learning_rule = MomentumLearningRule(hyper["learning_rate"], hyper["momentum_coeff"])
+    learning_rule = GradientDescentLearningRule(hyper["learning_rate"])
 
     train_data, valid_data, test_data = load_data_hog(rng, batch_size=hyper["batch_size"])
 
