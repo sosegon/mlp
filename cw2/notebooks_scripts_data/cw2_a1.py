@@ -14,7 +14,7 @@ from common import load_data, load_data_hog, train_and_save_results, L2Penalty
 stats_interval = 1
 seed=10102016
 
-def network_dropout(num_epochs):
+def network_dropout(exp_name, num_epochs):
     hyper = OrderedDict()
     hyper["learning_rate"] = 0.001
     hyper["dropout_prob"] = 0.5
@@ -46,7 +46,7 @@ def network_dropout(num_epochs):
     train_data, valid_data, test_data = load_data(rng, batch_size=hyper["batch_size"])
 
     train_and_save_results(
-        "network_dropout",
+        exp_name + "_network_dropout",
         model,
         error,
         learning_rule,
@@ -57,7 +57,7 @@ def network_dropout(num_epochs):
         stats_interval
         )
 
-def network_regularization(num_epochs):
+def network_regularization(exp_name, num_epochs):
     hyper = OrderedDict()
     hyper["learning_rate"] = 0.001
     hyper["l2_coeff"] = 1e-2
@@ -95,7 +95,7 @@ def network_regularization(num_epochs):
     train_data, valid_data, test_data = load_data(rng, batch_size=hyper["batch_size"])
 
     train_and_save_results(
-        "network_regularization",
+        exp_name + "_network_regularization",
         model,
         error,
         learning_rule,
@@ -106,7 +106,7 @@ def network_regularization(num_epochs):
         stats_interval
         )
 
-def network_hog(num_epochs):
+def network_hog(exp_name, num_epochs):
     hyper = OrderedDict()
     hyper["learning_rate"] = 0.001
     hyper["batch_size"] = 50
@@ -134,7 +134,7 @@ def network_hog(num_epochs):
     train_data, valid_data, test_data = load_data_hog(rng, batch_size=hyper["batch_size"])
 
     train_and_save_results(
-        "network_hog",
+        exp_name + "_network_hog",
         model,
         error,
         learning_rule,
@@ -145,24 +145,26 @@ def network_hog(num_epochs):
         stats_interval
         )
 
-def train_networks(model_type, num_epochs):
+def train_networks(exp_name, model_type, num_epochs):
     if model_type == 0:
-        network_dropout(num_epochs)
+        network_dropout(exp_name, num_epochs)
     elif model_type == 1:
-        network_regularization(num_epochs)
+        network_regularization(exp_name, num_epochs)
     elif model_type == 2:
-        network_hog(num_epochs)
+        network_hog(exp_name, num_epochs)
     else:
         print("No valid model")
 
 #########################################################################################
 
 parser = argparse.ArgumentParser(description="Baseline systems for coursework 2")
+parser.add_argument('exp_name', type=str, help="Name of experiment")
 parser.add_argument('model_type', type=int, help="Type of classifier")
 parser.add_argument('-n', dest='num_epochs', type=int, default=100)
 
 args = parser.parse_args()
+exp_name = args.exp_name
 model_type = args.model_type
 num_epochs = args.num_epochs
 
-train_networks(model_type, num_epochs)
+train_networks(exp_name, model_type, num_epochs)
