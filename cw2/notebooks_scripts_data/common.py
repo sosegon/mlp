@@ -4,6 +4,7 @@ from skimage.feature import hog
 import logging
 from mlp.data_providers import MNISTDataProvider, EMNISTDataProvider
 from mlp.optimisers import Optimiser
+from collections import OrderedDict
 
 plt.style.use('ggplot')
 
@@ -28,10 +29,36 @@ def write_to_log_file(log_file_name, header, keys, stats):
     
     log_file.close()
 
+def train_and_save_results(
+    file_name, model, error, learning_rule, hyper, train_data, valid_data, test_data, stats_interval):
+    
+    _ = train_model_and_plot_stats(
+        model, 
+        error, 
+        learning_rule, 
+        train_data, 
+        valid_data,
+        test_data, 
+        hyper['num_epochs'], 
+        stats_interval, 
+        notebook=False)
+
+    header = ""
+
+    for key in hyper:
+        header = header + ", " + key + ": " + str(hyper[key])
+
+    for key in _[3]:
+        header = header + ", " + key + ": " + str(_[3][key])
+
+    header = header[2:]
+
+    write_to_log_file("{:s}_log.txt".format(file_name), header, _[1], _[0])
+    _[4].savefig("{:s}_error.png".format(file_name), dpi=90)
+    _[6].savefig("{:s}_accuracy.png".format(file_name), dpi=90)
 
 def train_model_and_plot_stats(
-        model, error, learning_rule, train_data, valid_data, num_epochs, stats_interval, notebook=True):
-    
+        model, error, learning_rule, train_data, valid_data, test_data, num_epochs, stats_interval, notebook=True):
     # As well as monitoring the error over training also monitor classification
     # accuracy i.e. proportion of most-probable predicted classes being equal to targets
     data_monitors={'acc': lambda y, t: (y.argmax(-1) == t.argmax(-1)).mean()}
@@ -43,6 +70,10 @@ def train_model_and_plot_stats(
     # Run the optimiser for 5 epochs (full passes through the training set)
     # printing statistics every epoch.
     stats, keys, run_time = optimiser.train(num_epochs=num_epochs, stats_interval=stats_interval)
+
+    # Test after training
+    tester = Tester(model, error, test_data, data_monitors)
+    test_metrics = tester.test()
 
     # Plot the change in the validation and training set error over training.
     fig_1 = plt.figure(figsize=(8, 4))
@@ -62,7 +93,7 @@ def train_model_and_plot_stats(
     ax_2.legend(loc=0)
     ax_2.set_xlabel('Epoch number')
     
-    return stats, keys, run_time, fig_1, ax_1, fig_2, ax_2
+    return stats, keys, run_time, test_metrics, fig_1, ax_1, fig_2, ax_2
 
 def normalize_data(data):
     mean = np.mean(data)
@@ -86,15 +117,16 @@ def load_data(rng, batch_size=100):
     # Create data provider objects for the MNIST data set
     train_data = EMNISTDataProvider('train', batch_size=batch_size, rng=rng)
     valid_data = EMNISTDataProvider('valid', batch_size=batch_size, rng=rng)
+    test_data = EMNISTDataProvider('valid', batch_size=batch_size, rng=rng)
 
     # Normalize data
     train_data.inputs = normalize_data(train_data.inputs)
     valid_data.inputs = normalize_data(valid_data.inputs)
+    test_data.inputs = normalize_data(test_data.inputs)
 
-    return train_data, valid_data
+    return train_data, valid_data, test_data
 
 def extract_hog(data_set):
-
     num_samples, size_sample = data_set.shape
     size_digit = int(np.sqrt(size_sample))
     
@@ -107,14 +139,14 @@ def extract_hog(data_set):
 
     return np.array(hog_data)
 
-
 def load_data_hog(rng, batch_size=100):
-    train_data, valid_data = load_data(rng, batch_size)
+    train_data, valid_data, test_data = load_data(rng, batch_size)
 
     train_data.inputs = extract_hog(train_data.inputs)
     valid_data.inputs = extract_hog(valid_data.inputs)
+    test_data.inputs = extract_hog(test_data.inputs)
 
-    return train_data, valid_data    
+    return train_data, valid_data, test_data
 
 # from https://classroom.udacity.com/nanodegrees/nd013/parts/fbf77062-5703-404e-b60c-95b78b2f3f9e/modules/2b62a1c3-e151-4a0e-b6b6-e424fa46ceab/lessons/fd66c083-4ccb-4fe3-bda1-c29db76f50a0/concepts/d479f43a-7bbb-4de7-9452-f6b991ece599
 def get_hog_features(img, orient, pix_per_cell, cell_per_block, vis=False, feature_vec=True):
@@ -145,6 +177,42 @@ def extract_features(image):
         )
 
     return hog_feats
+
+class Tester(object):
+    """Basic model tester"""
+
+    def __init__(self, model, error, test_dataset, data_monitors):
+        self.model = model
+        self.error = error
+        self.test_dataset = test_dataset
+        self.data_monitors = OrderedDict([('error', error)])
+        self.data_monitors.update(data_monitors)
+
+    def eval_monitors(self, dataset, label):
+        """Evaluates the monitors for the given dataset.
+
+        Args:
+            dataset: Dataset to perform evaluation with.
+            label: Tag to add to end of monitor keys to identify dataset.
+
+        Returns:
+            OrderedDict of monitor values evaluated on dataset.
+        """
+        data_mon_vals = OrderedDict([(key + label, 0.) for key
+                                     in self.data_monitors.keys()])
+        for inputs_batch, targets_batch in dataset:
+            activations = self.model.fprop(inputs_batch, evaluation=True)
+            for key, data_monitor in self.data_monitors.items():
+                data_mon_vals[key + label] += data_monitor(
+                    activations[-1], targets_batch)
+        for key, data_monitor in self.data_monitors.items():
+            data_mon_vals[key + label] /= dataset.num_batches
+        return data_mon_vals
+
+    def test(self):
+
+        return self.eval_monitors(self.test_dataset, '(test)')
+
 
 class L1Penalty(object):
     """L1 parameter penalty.
