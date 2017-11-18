@@ -160,3 +160,143 @@ class MomentumLearningRule(GradientDescentLearningRule):
             mom *= self.mom_coeff
             mom -= self.learning_rate * grad
             param += mom
+
+
+class AdamLearningRule(GradientDescentLearningRule):
+    """
+    Gradient descent with momentum  and variance learning rule.
+    """
+
+    def __init__(self, learning_rate=1e-3, alpha=0.9, beta=0.999, epsilon=1e-8):
+        """Creates a new learning rule object.
+
+        Args:
+            learning_rate: A postive scalar to scale gradient updates to the
+                parameters by. This needs to be carefully set - if too large
+                the learning dynamic will be unstable and may diverge, while
+                if set too small learning will proceed very slowly.
+            alpha:
+            beta:
+            epsilon:
+        """
+        super(AdamLearningRule, self).__init__(learning_rate)
+        self.alpha = alpha
+        self.beta = beta
+        self.epsilon = epsilon
+
+    def initialise(self, params):
+        """Initialises the state of the learning rule for a set or parameters.
+
+        This must be called before `update_params` is first called.
+
+        Args:
+            params: A list of the parameters to be optimised. Note these will
+                be updated *in-place* to avoid reallocating arrays on each
+                update.
+        """
+        super(AdamLearningRule, self).initialise(params)
+        self.moms = []
+        self.vars = []
+        for param in self.params:
+            self.moms.append(np.zeros_like(param))
+            self.vars.append(np.zeros_like(param))
+
+    def reset(self):
+        """Resets any additional state variables to their intial values.
+
+        For this learning rule this corresponds to zeroing all the momenta.
+        """
+        for mom in zip(self.moms):
+            mom *= 0.
+
+        for var in zip(self.vars):
+            var *= 0.
+
+    def update_params(self, grads_wrt_params):
+        """Applies a single update to all parameters.
+
+        All parameter updates are performed using in-place operations and so
+        nothing is returned.
+
+        Args:
+            grads_wrt_params: A list of gradients of the scalar loss function
+                with respect to each of the parameters passed to `initialise`
+                previously, with this list expected to be in the same order.
+        """
+        for param, mom, var, grad in zip(self.params, self.moms, self.vars, grads_wrt_params):
+
+            mom *= self.alpha
+            mom += (1 - self.alpha) * grad
+            var *= self.beta
+            var += (1 - self.beta) * grad**2
+
+            param -= self.learning_rate * mom / (var**0.5 + self.epsilon)
+
+            # mom = self.alpha * mom + (1 - self.alpha) * grad
+            # var = self.beta * var + (1 - self.beta) * grad**2
+
+            # param = param - (self.learning_rate * mom / (var**0.5 + self.epsilon))
+            # mom = (mom * self.mom_coeff) - self.learning_rate * grad
+            # param = param + mom
+
+
+class RMSPropRule(GradientDescentLearningRule):
+    """
+    Gradient descent with mean learning rule.
+    """
+
+    def __init__(self, learning_rate=1e-3, beta=0.9, epsilon=1e-8):
+        """Creates a new learning rule object.
+
+        Args:
+            learning_rate: A postive scalar to scale gradient updates to the
+                parameters by. This needs to be carefully set - if too large
+                the learning dynamic will be unstable and may diverge, while
+                if set too small learning will proceed very slowly.
+            beta:
+            epsilon:
+        """
+        super(RMSPropRule, self).__init__(learning_rate)
+
+        self.beta = beta
+        self.epsilon = epsilon
+
+    def initialise(self, params):
+        """Initialises the state of the learning rule for a set or parameters.
+
+        This must be called before `update_params` is first called.
+
+        Args:
+            params: A list of the parameters to be optimised. Note these will
+                be updated *in-place* to avoid reallocating arrays on each
+                update.
+        """
+        super(RMSPropRule, self).initialise(params)
+        self.means = []
+        for param in self.params:
+            self.means.append(np.zeros_like(param))
+
+    def reset(self):
+        """Resets any additional state variables to their intial values.
+
+        For this learning rule this corresponds to zeroing all the momenta.
+        """
+        for mean in zip(self.means):
+            mean *= 0.
+
+    def update_params(self, grads_wrt_params):
+        """Applies a single update to all parameters.
+
+        All parameter updates are performed using in-place operations and so
+        nothing is returned.
+
+        Args:
+            grads_wrt_params: A list of gradients of the scalar loss function
+                with respect to each of the parameters passed to `initialise`
+                previously, with this list expected to be in the same order.
+        """
+        for param, mean, grad in zip(self.params, self.means, grads_wrt_params):
+
+            mean *= self.beta
+            mean += (1 - self.beta) * grad**2
+            param -= self.learning_rate * grad / (mean**0.5 + self.epsilon)
