@@ -361,7 +361,7 @@ class BatchNormalizationLayer(StochasticLayerWithParameters):
         mean = np.mean(inputs, axis=0)
         var = np.var(inputs, axis=0)
 
-        outputs = np.copy(inputs)
+        outputs = np.copy(inputs).astype(float)
 
         outputs -= mean
         outputs /= np.sqrt(var + self.epsilon)
@@ -393,11 +393,12 @@ class BatchNormalizationLayer(StochasticLayerWithParameters):
         var = np.var(inputs, axis=0)
         N = inputs.shape[0]
 
-        output = np.copy(self.gamma)
+        output = np.copy(self.gamma).astype(float)
         output /= N
         output /= (var + self.epsilon)**0.5
 
-        temp = N * grads_wrt_outputs
+        temp = np.copy(grads_wrt_outputs).astype(float)
+        temp *= N
         temp -= np.sum(grads_wrt_outputs, axis=0)
         temp -= (inputs - mean) * (var + self.epsilon)**(-1.0) * np.sum(grads_wrt_outputs * (inputs - mean), axis=0)
 
@@ -418,7 +419,7 @@ class BatchNormalizationLayer(StochasticLayerWithParameters):
         mean = np.mean(inputs, axis=0)
         var = np.var(inputs, axis=0)
 
-        outputs = np.copy(inputs)
+        outputs = np.copy(inputs).astype(float)
 
         outputs -= mean
         outputs /= np.sqrt(var + self.epsilon)
