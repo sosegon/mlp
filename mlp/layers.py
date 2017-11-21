@@ -358,7 +358,18 @@ class BatchNormalizationLayer(StochasticLayerWithParameters):
     def fprop(self, inputs, stochastic=True):
         """Forward propagates inputs through a layer."""
 
-        raise NotImplementedError
+        mean = np.mean(inputs, axis=0)
+        var = np.var(inputs, axis=0)
+
+        outputs = np.copy(inputs)
+
+        outputs -= mean
+        outputs /= np.sqrt(var + self.epsilon)
+
+        outputs *= self.gamma
+        outputs += self.beta
+
+        return outputs
 
     def bprop(self, inputs, outputs, grads_wrt_outputs):
         """Back propagates gradients through a layer.
@@ -378,7 +389,19 @@ class BatchNormalizationLayer(StochasticLayerWithParameters):
             (batch_size, input_dim).
         """
 
-        raise NotImplementedError
+        mean = np.mean(inputs, axis=0)
+        var = np.var(inputs, axis=0)
+        N = inputs.shape[0]
+
+        output = np.copy(self.gamma)
+        output /= N
+        output /= (var + self.epsilon)**0.5
+
+        temp = N * grads_wrt_outputs
+        temp -= np.sum(grads_wrt_outputs, axis=0)
+        temp -= (inputs - mean) * (var + self.epsilon)**(-1.0) * np.sum(grads_wrt_outputs * (inputs - mean), axis=0)
+
+        return output * temp
 
     def grads_wrt_params(self, inputs, grads_wrt_outputs):
         """Calculates gradients with respect to layer parameters.
@@ -392,7 +415,18 @@ class BatchNormalizationLayer(StochasticLayerWithParameters):
             list of arrays of gradients with respect to the layer parameters
             `[grads_wrt_weights, grads_wrt_biases]`.
         """
-        raise NotImplementedError
+        mean = np.mean(inputs, axis=0)
+        var = np.var(inputs, axis=0)
+
+        outputs = np.copy(inputs)
+
+        outputs -= mean
+        outputs /= np.sqrt(var + self.epsilon)
+
+        g_wrt_gamma = np.sum(grads_wrt_outputs * outputs, axis=0)
+        g_wrt_beta = np.sum(grads_wrt_outputs, axis=0)
+
+        return [g_wrt_gamma, g_wrt_beta]
 
     def params_penalty(self):
         """Returns the parameter dependent penalty term for this layer.
