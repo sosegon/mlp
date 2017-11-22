@@ -558,6 +558,55 @@ class ConvolutionalLayer(LayerWithParameters):
 
         self.cache = None
 
+    def im2col(self, inputs, stride=1):
+        num_elems = inputs.shape[0]
+        num_channels = self.num_input_channels
+        kernel_height = self.kernel_dim_1
+        kernel_width = self.kernel_dim_2
+        image_height = self.input_dim_1
+        image_width = self.input_dim_2
+
+        outputs = []
+
+        elem_counter = 0
+        while elem_counter < num_elems: # Get an element
+            output_per_elem = []
+
+            height_counter = 0 # Moving vertically over the picked element
+            while height_counter + kernel_height < image_height + 1:
+                output_per_row = []
+
+                width_counter = 0 # Moving horizontally over the picked element
+                while width_counter + kernel_width < image_width + 1:
+                    output_per_col = []
+
+                    channel_counter = 0
+                    while channel_counter < num_channels: # Get a channel from that element
+                        
+                        #patch = input[height_counter:height_counter + filter_height, width_counter:width_counter + filter_width, :]
+                        patch = inputs[
+                        elem_counter, 
+                        channel_counter, 
+                        height_counter:height_counter + kernel_height,
+                        width_counter:width_counter + kernel_width ]
+
+                        output_per_col.append(patch.ravel())
+
+                        channel_counter += 1
+
+                    output_per_row.append(output_per_col)
+                    width_counter += stride
+
+                output_per_elem.append(output_per_row)
+                height_counter += stride
+
+            outputs.append(output_per_elem)
+            elem_counter += 1
+
+        outputs = np.array(outputs)
+        n, c, h, w, d = outputs.shape
+        return outputs.reshape(n, c * h, w * d)
+
     def fprop(self, inputs):
         """Forward propagates activations through the layer transformation.
         For inputs `x`, outputs `y`, kernels `K` and biases `b` the layer
@@ -567,7 +616,43 @@ class ConvolutionalLayer(LayerWithParameters):
         Returns:
             outputs: Array of layer outputs of shape (batch_size, output_dim).
         """
-        raise NotImplementedError
+        num_elems, num_channels, height_in, width_in = inputs.shape
+
+        height_out = self.input_dim_1 - self.kernel_dim_1 + 1
+        width_out = self.input_dim_2 - self.kernel_dim_2 + 1
+
+        if type(height_out) is not int or type(width_out) is not int:
+            raise Exception("Invalid output dimension!")
+
+        height_out = int(height_out)
+        width_out = int(width_out)
+
+        # convert input images to input columns
+        col_inputs = self.im2col(inputs)
+
+        # invert kernels to perform convolution
+        conv_kernels = self.kernels[:, :, ::-1, ::-1]
+        o, i, h, w = conv_kernels.shape
+        col_kernels = conv_kernels.reshape(o, -1)
+        
+        # print("\ncol inputs shape")
+        # print(col_inputs.shape)
+
+        # print("\nkernel shape")
+        # print(col_kernels.shape)
+
+        # print("\ncol inputs")
+        # print(col_inputs)
+
+        # print("\nkernels")
+        # print(col_kernels)
+
+        output = col_inputs @ col_kernels.T + self.biases
+        output = output.transpose(0, 2, 1)
+        output = output.reshape(num_elems, self.num_output_channels, height_out, width_out)
+
+        #print(output)
+        return output
 
     def bprop(self, inputs, outputs, grads_wrt_outputs):
         """Back propagates gradients through a layer.
