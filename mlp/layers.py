@@ -654,6 +654,72 @@ class ConvolutionalLayer(LayerWithParameters):
         #print(output)
         return output
 
+    def col2im(self, inputs, stretched_grads, stride=1):
+        outputs = np.zeros_like(inputs)
+
+        num_elems = inputs.shape[0]
+        num_channels = self.num_input_channels
+        kernel_height = self.kernel_dim_1
+        kernel_width = self.kernel_dim_2
+        image_height = self.input_dim_1
+        image_width = self.input_dim_2
+
+        stretched_patch_size = kernel_height * kernel_width
+
+        elem_counter = 0
+        while elem_counter < num_elems: # Get an element
+            output_per_elem = []
+
+            stretch_row_counter = 0 # Index for the stretched grads
+            height_counter = 0 # Moving vertically over the picked element
+            while height_counter + kernel_height < image_height + 1:
+                output_per_row = []
+
+                width_counter = 0 # Moving horizontally over the picked element
+                while width_counter + kernel_width < image_width + 1:
+                    output_per_col = []
+
+                    channel_counter = 0
+                    while channel_counter < num_channels: # Get a channel from that element
+
+                        # weights to sum
+                        weights = stretched_grads[
+                        elem_counter,
+                        stretch_row_counter,
+                        stretched_patch_size*channel_counter : stretched_patch_size*(channel_counter+1)
+                        ]
+                        
+                        weights = weights.reshape((kernel_height, kernel_width))
+                        
+                        # print("\n\nrow: {:d}, col: {:d}, channel: {:d}, elem: {:d}, st row: {:d}".format(
+                        #     height_counter, width_counter, channel_counter, elem_counter, width_counter+height_counter))
+
+                        outputs[
+                        elem_counter, 
+                        channel_counter, 
+                        height_counter:height_counter + kernel_height,
+                        width_counter:width_counter + kernel_width ] += weights
+
+                        # print(weights)
+                        # print(outputs)
+                        # print(outputs[
+                        # elem_counter, 
+                        # channel_counter, 
+                        # height_counter:height_counter + kernel_height,
+                        # width_counter:width_counter + kernel_width ])
+
+                        channel_counter += 1
+
+                    width_counter += stride
+                    stretch_row_counter += 1
+
+                height_counter += stride
+
+            elem_counter += 1
+
+        return outputs
+
+
     def bprop(self, inputs, outputs, grads_wrt_outputs):
         """Back propagates gradients through a layer.
         Given gradients with respect to the outputs of the layer calculates the
@@ -673,7 +739,34 @@ class ConvolutionalLayer(LayerWithParameters):
         """
         # Pad the grads_wrt_outputs
 
-        raise NotImplementedError
+        conv_kernels = self.kernels[:, :, ::-1, ::-1]
+        o, i, h, w = conv_kernels.shape
+        col_kernels = conv_kernels.reshape(o, -1)
+        #print("kernels")
+        #print(col_kernels)
+
+        n, c, h, w = grads_wrt_outputs.shape
+        #print("###################################################")
+        #print("Grads wrt outputs")
+        #print(grads_wrt_outputs)
+        
+        g_wrt_outputs = grads_wrt_outputs.reshape(n, c, h*w)
+        #print(g_wrt_outputs)
+        
+        g_wrt_outputs = g_wrt_outputs.transpose(0, 2, 1)
+        #print(g_wrt_outputs)
+
+        stretched_grads = g_wrt_outputs @ col_kernels
+        #print("###################################################")
+        #print("Grads wrt inputs stretched")
+        #print(stretched_grads)
+        
+        outputs = self.col2im(inputs, stretched_grads)
+        #print("###################################################")
+        #print("Grads wrt inputs")
+        #print(outputs)
+
+        return outputs
 
     def grads_wrt_params(self, inputs, grads_wrt_outputs):
         """Calculates gradients with respect to layer parameters.
