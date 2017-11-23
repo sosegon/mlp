@@ -855,6 +855,152 @@ class ConvolutionalLayer(LayerWithParameters):
         )
 
 
+class MaxPoolingLayer(Layer):
+    
+    def __init__(self, pool_size=2):
+        """Construct a new max-pooling layer.
+        
+        Args:
+            pool_size: Positive integer specifying size of pools over
+               which to take maximum value. The outputs of the layer
+               feeding in to this layer must have a dimension which
+               is a multiple of this pool size such that the outputs
+               can be split in to pools with no dimensions left over.
+        """
+        assert pool_size > 0
+        self.pool_size = pool_size
+
+    def mask(self, inputs):
+        # elems in batch, number of channels, height, width
+        num_elems, num_channels, image_height, image_width = inputs.shape
+        ps = self.pool_size
+
+        num_outputs = np.zeros_like(inputs)
+        elem_counter = 0
+        while elem_counter < num_elems: # Get an element
+
+            channel_counter = 0
+            while channel_counter < num_channels: # Get a channel from that element
+
+                height_counter = 0 # Moving vertically over the picked element
+                while height_counter + ps < image_height + 1:
+
+                    width_counter = 0 # Moving horizontally over the picked element
+                    while width_counter + ps < image_width + 1:
+                        
+                        patch = inputs[
+                        elem_counter, 
+                        channel_counter, 
+                        height_counter:height_counter + ps,
+                        width_counter:width_counter + ps ]
+
+                        # used for the mask
+                        zeros_patch = np.zeros_like(patch)
+
+                        # flatten patch and get max
+                        w_patch, h_patch = patch.shape
+                        patch = patch.ravel()
+                        max_ = np.max(patch)
+
+                        # when there are more than one max
+                        max_index = np.where(patch == max_)[0][0]
+                        bool_patch = np.zeros_like(patch)
+                        bool_patch[max_index] = max_
+                        bool_patch = bool_patch == max_
+                        bool_patch = bool_patch.reshape(w_patch, h_patch)
+
+                        # change the index to 1
+                        index = np.where(bool_patch == True)
+                        zeros_patch[index] = 1
+                        
+                        # update the matrix of zeros
+                        num_outputs[
+                        elem_counter, 
+                        channel_counter, 
+                        height_counter:height_counter + ps,
+                        width_counter:width_counter + ps ] = zeros_patch
+
+                        width_counter += ps
+
+                    height_counter += ps
+
+                channel_counter += 1
+
+            elem_counter += 1
+
+        bools = num_outputs == 1
+
+        return bools
+    
+    def fprop(self, inputs):
+        """Forward propagates activations through the layer transformation.
+        
+        This corresponds to taking the maximum over non-overlapping pools of
+        inputs of a fixed size `pool_size`.
+
+        Args:
+            inputs: Array of layer inputs of shape (batch_size, input_dim).
+
+        Returns:
+            outputs: Array of layer outputs of shape (batch_size, output_dim).
+        """
+        assert inputs.shape[-1] % self.pool_size == 0 and inputs.shape[-2] % self.pool_size == 0, (
+            'Last two dimension of inputs must be multiple of pool size')
+        
+        ps = self.pool_size
+
+        # print("###################################################")
+        # print("Inputs")
+        # print(inputs)
+
+        mask = self.mask(inputs)
+        # print("###################################################")
+        # print("Reshaped inputs")
+        # print(mask)
+
+        n, c, h, w = inputs.shape
+        indices = np.where(mask==True)
+        max_outputs = inputs[indices].reshape(n, c, int(h/ps), int(w/ps))
+        # print("###################################################")
+        # print("Max inputs")
+        # print(max_outputs)
+
+    def bprop(self, inputs, outputs, grads_wrt_outputs):
+        """Back propagates gradients through a layer.
+
+        Given gradients with respect to the outputs of the layer calculates the
+        gradients with respect to the layer inputs.
+
+        Args:
+            inputs: Array of layer inputs of shape (batch_size, input_dim).
+            outputs: Array of layer outputs calculated in forward pass of
+                shape (batch_size, output_dim).
+            grads_wrt_outputs: Array of gradients with respect to the layer
+                outputs of shape (batch_size, output_dim).
+
+        Returns:
+            Array of gradients with respect to the layer inputs of shape
+            (batch_size, input_dim).
+        """
+        ps = self.pool_size
+        mask = self.mask(inputs)
+        mask = mask.ravel()
+
+        g_wrt_inputs = np.copy(inputs)
+        g_wrt_inputs = g_wrt_inputs.ravel()
+
+        g_wrt_outputs = grads_wrt_outputs.ravel()
+
+        indices = mask == True
+        g_wrt_inputs[indices] = g_wrt_outputs * g_wrt_inputs[indices]
+
+        g_wrt_inputs = g_wrt_inputs.reshape(inputs.shape)
+                        
+        return g_wrt_inputs
+                
+    def __repr__(self):
+        return 'MaxPoolingLayer(pool_size={0})'.format(self.pool_size)
+
 class ReluLayer(Layer):
     """Layer implementing an element-wise rectified linear transformation."""
 
