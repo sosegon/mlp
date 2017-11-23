@@ -780,7 +780,46 @@ class ConvolutionalLayer(LayerWithParameters):
             `[grads_wrt_kernels, grads_wrt_biases]`.
         """
 
-        raise NotImplementedError
+        g_wrt_biases = np.sum(grads_wrt_outputs, axis=(0, 2, 3))
+
+        n, c, h, w = grads_wrt_outputs.shape
+        # print("###################################################")
+        # print("Grads wrt outputs")
+        # print(grads_wrt_outputs.shape)
+        
+        # proper dimensions for multiplication with inputs
+        g_wrt_outputs = grads_wrt_outputs.reshape(n, c, h*w)
+        # print("###################################################")
+        # print("Grads wrt outputs")
+        # print(g_wrt_outputs.shape)
+        
+        col_inputs = self.im2col(inputs)
+        #col_inputs = col_inputs.transpose(0, 2, 1)
+        # print("###################################################")
+        # print("Col inputs")
+        # print(col_inputs.shape)
+
+        # the derivative wrt to the kernels
+        g_wrt_kernels = g_wrt_outputs @ col_inputs
+
+        # sum the contributions of every element in the batch
+        g_wrt_kernels = np.sum(g_wrt_kernels, axis=0)
+
+        # reshape tot the kernels shape
+        g_wrt_kernels = g_wrt_kernels.reshape(
+            self.num_output_channels,
+            self.num_input_channels,
+            self.kernel_dim_1,
+            self.kernel_dim_2)
+        
+        # transformation due to convolution
+        g_wrt_kernels = g_wrt_kernels[:, :, ::-1, ::-1]
+
+        # print("###################################################")
+        # print("Grads wrt kernels")
+        # print(g_wrt_kernels)
+
+        return [g_wrt_kernels, g_wrt_biases]
 
     def params_penalty(self):
         """Returns the parameter dependent penalty term for this layer.
