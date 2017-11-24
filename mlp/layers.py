@@ -590,6 +590,10 @@ class ConvolutionalLayer(LayerWithParameters):
                         height_counter:height_counter + kernel_height,
                         width_counter:width_counter + kernel_width ]
 
+                        # print("kernel: {:d}, {:d}".format(kernel_height, kernel_width))
+                        # print("elem: {:d}, row: {:d}, col: {:d}, channel: {:d}, nitems {:d}".format(
+                        #     elem_counter, height_counter, width_counter, channel_counter, patch.ravel().shape[0]))
+                        # print(patch)
                         output_per_col.append(patch.ravel())
 
                         channel_counter += 1
@@ -604,8 +608,8 @@ class ConvolutionalLayer(LayerWithParameters):
             elem_counter += 1
 
         outputs = np.array(outputs)
-        n, c, h, w, d = outputs.shape
-        return outputs.reshape(n, c * h, w * d)
+        n, h, w, c, d = outputs.shape
+        return outputs.reshape(n, h*w, c*d)
 
     def fprop(self, inputs):
         """Forward propagates activations through the layer transformation.
@@ -964,6 +968,7 @@ class MaxPoolingLayer(Layer):
         # print("###################################################")
         # print("Max inputs")
         # print(max_outputs)
+        return max_outputs
 
     def bprop(self, inputs, outputs, grads_wrt_outputs):
         """Back propagates gradients through a layer.
