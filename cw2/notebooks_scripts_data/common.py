@@ -51,6 +51,7 @@ def train_and_save_results(
     for key in _[3]:
         header = header + ", " + key + ": " + str(_[3][key])
 
+    header = header + ", time: " + str(_[2])
     header = header[2:]
 
     write_to_log_file("{:s}_log.txt".format(file_name), header, _[1], _[0])
