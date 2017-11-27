@@ -14,12 +14,8 @@ from common import load_data, load_data_hog, train_and_save_results, L2Penalty
 stats_interval = 1
 seed=10102016
 
-def network_dropout(exp_name, num_epochs):
-    hyper = OrderedDict()
-    hyper["learning_rate"] = 0.001
+def network_dropout(exp_name, hyper):
     hyper["dropout_prob"] = 0.5
-    hyper["batch_size"] = 50
-    hyper["num_epochs"] = num_epochs
 
     input_dim, output_dim, hidden_dim = 784, 47, 100
 
@@ -51,7 +47,7 @@ def network_dropout(exp_name, num_epochs):
     train_data, valid_data, test_data = load_data(rng, batch_size=hyper["batch_size"])
 
     train_and_save_results(
-        exp_name + "_network_dropout",
+        exp_name + "_network_dropout_bn",
         model,
         error,
         learning_rule,
@@ -62,12 +58,8 @@ def network_dropout(exp_name, num_epochs):
         stats_interval
         )
 
-def network_regularization(exp_name, num_epochs):
-    hyper = OrderedDict()
-    hyper["learning_rate"] = 0.001
+def network_regularization(exp_name, hyper):
     hyper["l2_coeff"] = 1e-2
-    hyper["batch_size"] = 50
-    hyper["num_epochs"] = num_epochs
 
     input_dim, output_dim, hidden_dim = 784, 47, 100
 
@@ -105,7 +97,7 @@ def network_regularization(exp_name, num_epochs):
     train_data, valid_data, test_data = load_data(rng, batch_size=hyper["batch_size"])
 
     train_and_save_results(
-        exp_name + "_network_regularization",
+        exp_name + "_network_regularization_bn",
         model,
         error,
         learning_rule,
@@ -116,12 +108,7 @@ def network_regularization(exp_name, num_epochs):
         stats_interval
         )
 
-def network_hog(exp_name, num_epochs):
-    hyper = OrderedDict()
-    hyper["learning_rate"] = 0.001
-    hyper["batch_size"] = 50
-    hyper["num_epochs"] = num_epochs
-
+def network_hog(exp_name, hyper):
     input_dim, output_dim, hidden_dim = 36, 47, 100
 
     rng = np.random.RandomState(seed)
@@ -149,7 +136,7 @@ def network_hog(exp_name, num_epochs):
     train_data, valid_data, test_data = load_data_hog(rng, batch_size=hyper["batch_size"])
 
     train_and_save_results(
-        exp_name + "_network_hog",
+        exp_name + "_network_hog_bn",
         model,
         error,
         learning_rule,
@@ -160,13 +147,18 @@ def network_hog(exp_name, num_epochs):
         stats_interval
         )
 
-def train_networks(exp_name, model_type, num_epochs):
+def train_networks(exp_name, model_type, learning_rate, batch_size, num_epochs):
+    hyper = OrderedDict()
+    hyper["learning_rate"] = learning_rate
+    hyper["batch_size"] = batch_size
+    hyper["num_epochs"] = num_epochs
+
     if model_type == 0:
-        network_dropout(exp_name, num_epochs)
+        network_dropout(exp_name, hyper)
     elif model_type == 1:
-        network_regularization(exp_name, num_epochs)
+        network_regularization(exp_name, hyper)
     elif model_type == 2:
-        network_hog(exp_name, num_epochs)
+        network_hog(exp_name, hyper)
     else:
         print("No valid model")
 
@@ -176,10 +168,14 @@ parser = argparse.ArgumentParser(description="Systems with batch normalization f
 parser.add_argument('exp_name', type=str, help="Name of experiment")
 parser.add_argument('model_type', type=int, help="Type of classifier")
 parser.add_argument('-n', dest='num_epochs', type=int, default=100)
+parser.add_argument('-l', dest='learning_rate', type=float, default=0.001)
+parser.add_argument('-b', dest='batch_size', type=int, default=50)
 
 args = parser.parse_args()
 exp_name = args.exp_name
 model_type = args.model_type
 num_epochs = args.num_epochs
+learning_rate = args.learning_rate
+batch_size = args.batch_size
 
-train_networks(exp_name, model_type, num_epochs)
+train_networks(exp_name, model_type, learning_rate, batch_size, num_epochs)
