@@ -7,6 +7,7 @@ from mlp.initialisers import ConstantInit, GlorotUniformInit
 from mlp.learning_rules import GradientDescentLearningRule
 from collections import OrderedDict
 import numpy as np
+import matplotlib.pyplot as plt
 
 from keras.models import Sequential
 from keras.layers import Dense, Flatten, ELU, Activation, Lambda, Dropout
@@ -199,7 +200,7 @@ def getFeaturesTargets(X, y):
 
     return np.array(feats), np.array(targets)
 
-def save_plot_metrics(model_name, history):
+def save_plot_metrics(log_file_name, history):
     keys = history.history.keys()
 
     f, ax = plt.subplots(len(keys), 1, figsize=(5, 22))
@@ -210,7 +211,7 @@ def save_plot_metrics(model_name, history):
         ax[idx].set_ylabel(k)
         ax[idx].set_xlabel('epoch')
     
-    f.savefig("{:s}.png".format(model_name), dpi=90)
+    f.savefig("{:s}.png".format(log_file_name), dpi=90)
 
 def save_log_metrics(log_file_name, hyper, history):
     header = ""
@@ -218,7 +219,9 @@ def save_log_metrics(log_file_name, hyper, history):
     for key in hyper:
         header = header + ", " + key + ": " + str(hyper[key])
 
-    with open(log_file_name, "w+") as log_file:
+    header = header[2:]
+
+    with open(log_file_name + ".txt", "w+") as log_file:
         log_file.write(header+"\n")
         
         keys = history.history.keys()
@@ -279,16 +282,17 @@ def train_model(model, hyper_params, log_file_name):
         )
 
     save_log_metrics(log_file_name, hyper_params, history)
+    save_plot_metrics(log_file_name, history)
 
 def train_networks(exp_name, model_type, learning_rate, training_size, batch_size, num_epochs):
     model = None
     log_file_name = None
     if model_type == 1:
         model = get_model_1(learning_rate)
-        log_file_name = "{:s}_cnn1_log.txt".format(exp_name)
+        log_file_name = "{:s}_cnn1_log".format(exp_name)
     elif model_type == 2:
         model = get_model_2(learning_rate)
-        log_file_name = "{:s}_cnn2_log.txt".format(exp_name)
+        log_file_name = "{:s}_cnn2_log".format(exp_name)
     else:
         raise NotImplementedError
 
