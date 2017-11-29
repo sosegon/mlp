@@ -126,12 +126,12 @@ def network_hog(exp_name, learning_rule, hyper):
         stats_interval
         )
 
-def train_networks(exp_name, model_type, learning_rule_type, num_epochs, epsilon):
+def train_networks(exp_name, model_type, learning_rule_type, learning_rate, batch_size, num_epochs):
     hyper = OrderedDict()
-    hyper["learning_rate"] = 0.001
-    hyper["batch_size"] = 50
+    hyper["learning_rate"] = learning_rate
+    hyper["batch_size"] = batch_size
     hyper["num_epochs"] = num_epochs
-    hyper["epsilon"] = epsilon
+    hyper["epsilon"] = 1e-8
 
     if learning_rule_type == 0:
         hyper["alpha"] = 0.9
@@ -160,13 +160,16 @@ parser.add_argument('exp_name', type=str, help="Name of experiment")
 parser.add_argument('model_type', type=int, help="Type of classifier")
 parser.add_argument('learning_rule_type', type=int, help="Learning rule")
 parser.add_argument('-n', dest='num_epochs', type=int, default=100)
-parser.add_argument('-e', dest='epsilon', type=float, default=1e-8)
+parser.add_argument('-l', dest='learning_rate', type=float, default=0.001)
+parser.add_argument('-b', dest='batch_size', type=int, default=50)
+
 
 args = parser.parse_args()
 exp_name = args.exp_name
 model_type = args.model_type
 learning_rule_type = args.learning_rule_type
 num_epochs = args.num_epochs
-epsilon = args.epsilon
+learning_rate = args.learning_rate
+batch_size = args.batch_size
 
-train_networks(exp_name, model_type, learning_rule_type, num_epochs, epsilon)
+train_networks(exp_name, model_type, learning_rule_type, learning_rate, batch_size, num_epochs)
