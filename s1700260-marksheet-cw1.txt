@@ -1,0 +1,34 @@
+s1700260
+MLP Coursework 1
+October 2017
+
+TOTAL MARK: 30 + 50  =  80/100
+
+
+TEST RESULTS:
+LeakyReLU fprop: Passed
+LeakyReLU bprop: Passed
+ELU fprop: Passed
+ELU bprop: Passed
+SELU fprop: Passed
+SELU bprop: Passed
+PART 1 MARK: 30/30 (6 tests passed)
+
+
+PART 2 MARK:  50/70
+
+COMMENTS:
+
+Abstract: The abstract is good but too general.  It could be improved by (1) referring to the fact that experiments were done on MNIST, (2) being specific about the class of activation functions investigated, and (3) briefly summarising the results and conclusions.
+
+Introduction: The introduction is OK.  Could have a little more detail on MNIST (pre-processing), and (more important) give a better motivation for why the investigations are of interest.
+
+Description of activation functions: Good description of activation functions, and good motivation.  Slightly better explanation for SELU would help - where do the parameter values come from?  Need to be clear that dying ReLU refers to the case when a RELU unit has 0 output for all training examples.
+
+Activation function experiments:  Nice description on initialisation approaches.  Good set of experiments trying different learning rates.  It is quite hard to compare best validation accuracies - I assume fig 1 is showing CE error?  It is of more interest to show classification accuracy?  What do you conclude from these experiments in terms of accuracy? The differences in error/accuracy between different settings are very small - are these significant?  How would you test it?  How were the training times estimated - are they accurate estimates of the compute required (i.e. properly comparable with each other)
+
+Deep neural network experiments:  Good set of experiments. In the discussion of overfitting what is most interesting is the lowest validation error at the early stopping point, rather than the error at 100 epochs, and this should be reflected in your discussion.  The initialisation experiments would have been more interesting on a deeper architecture as that is when initialisation starts to have more impact.
+
+Conclusions: Although there is some discussion of what results are obtained, there could have been more interpretation of the results.  the conclusions section doesn't really make conclusions based on the experiments.
+
+
