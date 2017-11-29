@@ -633,6 +633,7 @@ class ConvolutionalLayer(LayerWithParameters):
 
         # convert input images to input columns
         col_inputs = self.im2col(inputs)
+        self.cache = col_inputs
 
         # invert kernels to perform convolution
         conv_kernels = self.kernels[:, :, ::-1, ::-1]
@@ -765,12 +766,12 @@ class ConvolutionalLayer(LayerWithParameters):
         #print("Grads wrt inputs stretched")
         #print(stretched_grads)
         
-        outputs = self.col2im(inputs, stretched_grads)
+        outputs_ = self.col2im(inputs, stretched_grads)
         #print("###################################################")
         #print("Grads wrt inputs")
         #print(outputs)
 
-        return outputs
+        return outputs_
 
     def grads_wrt_params(self, inputs, grads_wrt_outputs):
         """Calculates gradients with respect to layer parameters.
@@ -797,7 +798,8 @@ class ConvolutionalLayer(LayerWithParameters):
         # print("Grads wrt outputs")
         # print(g_wrt_outputs.shape)
         
-        col_inputs = self.im2col(inputs)
+        #col_inputs = self.im2col(inputs)
+        col_inputs = self.cache
         #col_inputs = col_inputs.transpose(0, 2, 1)
         # print("###################################################")
         # print("Col inputs")
