@@ -4,7 +4,7 @@ from mlp.layers import AffineLayer, ReluLayer,DropoutLayer, ReshapeLayer, MaxPoo
 from mlp.errors import CrossEntropySoftmaxError
 from mlp.models import MultipleLayerModel
 from mlp.initialisers import ConstantInit, GlorotUniformInit
-from mlp.learning_rules import GradientDescentLearningRule
+from mlp.learning_rules import GradientDescentLearningRule, AdamLearningRule
 from collections import OrderedDict
 import numpy as np
 
@@ -14,13 +14,7 @@ from common import load_data, load_data_hog, train_and_save_results, L2Penalty
 stats_interval = 1
 seed=10102016
 
-def cnn_1(exp_name, num_epochs):
-    hyper = OrderedDict()
-    hyper["learning_rate"] = 0.001
-    hyper["dropout_prob"] = 0.5
-    hyper["batch_size"] = 50
-    hyper["num_epochs"] = num_epochs
-
+def cnn_1(exp_name, hyper):
     input_dim, output_dim, hidden_dim = 784, 47, 100
 
     rng = np.random.RandomState(seed)
@@ -42,7 +36,8 @@ def cnn_1(exp_name, num_epochs):
 
     error = CrossEntropySoftmaxError()
     
-    learning_rule = GradientDescentLearningRule(hyper["learning_rate"])
+    #learning_rule = GradientDescentLearningRule(hyper["learning_rate"])
+    learning_rule = AdamLearningRule(hyper["learning_rate"], hyper["alpha"], hyper["beta"], hyper["epsilon"])
 
     train_data, valid_data, test_data = load_data(rng, batch_size=hyper["batch_size"])
 
@@ -58,13 +53,7 @@ def cnn_1(exp_name, num_epochs):
         stats_interval
         )
 
-def cnn_2(exp_name, num_epochs):
-    hyper = OrderedDict()
-    hyper["learning_rate"] = 0.001
-    hyper["dropout_prob"] = 0.5
-    hyper["batch_size"] = 50
-    hyper["num_epochs"] = num_epochs
-
+def cnn_2(exp_name, hyper):
     input_dim, output_dim, hidden_dim = 784, 47, 100
 
     rng = np.random.RandomState(seed)
@@ -89,7 +78,8 @@ def cnn_2(exp_name, num_epochs):
 
     error = CrossEntropySoftmaxError()
     
-    learning_rule = GradientDescentLearningRule(hyper["learning_rate"])
+    #learning_rule = GradientDescentLearningRule(hyper["learning_rate"])
+    learning_rule = AdamLearningRule(hyper["learning_rate"], hyper["alpha"], hyper["beta"], hyper["epsilon"])
 
     train_data, valid_data, test_data = load_data(rng, batch_size=hyper["batch_size"])
 
@@ -105,11 +95,19 @@ def cnn_2(exp_name, num_epochs):
         stats_interval
         )
 
-def train_networks(exp_name, model_type, num_epochs):
+def train_networks(exp_name, model_type, learning_rate, batch_size, num_epochs):
+    hyper = OrderedDict()
+    hyper["learning_rate"] = learning_rate
+    hyper["batch_size"] = batch_size
+    hyper["num_epochs"] = num_epochs
+    hyper["epsilon"] = 1e-8
+    hyper["alpha"] = 0.9
+    hyper["beta"] = 0.999
+
     if model_type == 1:
-        cnn_1(exp_name, num_epochs)
+        cnn_1(exp_name, hyper)
     elif model_type == 2:
-        cnn_2(exp_name, num_epochs)
+        cnn_2(exp_name, hyper)
     else:
         print("No valid model")
 
@@ -118,11 +116,15 @@ def train_networks(exp_name, model_type, num_epochs):
 parser = argparse.ArgumentParser(description="Baseline systems for coursework 2")
 parser.add_argument('exp_name', type=str, help="Name of experiment")
 parser.add_argument('model_type', type=int, help="Type of classifier")
-parser.add_argument('-n', dest='num_epochs', type=int, default=100)
+parser.add_argument('-n', dest='num_epochs', type=int, default=20)
+parser.add_argument('-l', dest='learning_rate', type=float, default=0.01)
+parser.add_argument('-b', dest='batch_size', type=int, default=50)
 
 args = parser.parse_args()
 exp_name = args.exp_name
 model_type = args.model_type
 num_epochs = args.num_epochs
+learning_rate = args.learning_rate
+batch_size = args.batch_size
 
-train_networks(exp_name, model_type, num_epochs)
+train_networks(exp_name, model_type, learning_rate, batch_size, num_epochs)
