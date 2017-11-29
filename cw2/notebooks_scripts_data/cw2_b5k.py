@@ -13,7 +13,7 @@ from keras.models import Sequential
 from keras.layers import Dense, Flatten, ELU, Activation, Lambda, Dropout
 from keras.layers.convolutional import Convolution2D
 from keras.layers.pooling import MaxPooling2D
-from keras.optimizers import Adam
+from keras.optimizers import Adam, RMSprop
 from keras.initializers import glorot_uniform
 from random import randrange
 from keras.utils.np_utils import to_categorical
@@ -30,7 +30,7 @@ def get_model_1(learning):
 
     print(image_shape)
     model = Sequential()
-    model.add(Lambda(lambda x: x/127.5 - 1., input_shape=image_shape, output_shape=image_shape))
+    model.add(Lambda(lambda x: x, input_shape=image_shape, output_shape=image_shape))
     
     model.add(Convolution2D(
         5, 
@@ -42,7 +42,7 @@ def get_model_1(learning):
     model.add(Activation('relu'))
 
     model.add(Flatten())
-    model.add(Dense(47, kernel_initializer=glorot_uniform(seed)))
+    model.add(Dense(47, kernel_initializer=glorot_uniform(seed), activation='softmax'))
 
     optimizer = Adam(lr=learning)
     model.compile(optimizer=optimizer, loss="categorical_crossentropy", metrics=["accuracy"])
@@ -55,7 +55,7 @@ def get_model_2(learning):
 
     print(image_shape)
     model = Sequential()
-    model.add(Lambda(lambda x: x/127.5 - 1., input_shape=image_shape, output_shape=image_shape))
+    model.add(Lambda(lambda x: x, input_shape=image_shape, output_shape=image_shape))
     
     model.add(Convolution2D(
         5, 
@@ -76,7 +76,7 @@ def get_model_2(learning):
     model.add(Activation('relu'))
 
     model.add(Flatten())
-    model.add(Dense(47, kernel_initializer=glorot_uniform(seed)))
+    model.add(Dense(47, kernel_initializer=glorot_uniform(seed), activation='softmax'))
 
     optimizer = Adam(lr=learning)
     model.compile(optimizer=optimizer, loss="categorical_crossentropy", metrics=["accuracy"])
@@ -274,12 +274,21 @@ def train_model(model, hyper_params, log_file_name):
     valid_data.inputs = valid_data.inputs.reshape((n_elem, n_feat, n_feat, 1))
     valid_data.targets = to_categorical(valid_data.targets)  
 
+    n_elem, n_feat = test_data.inputs.shape
+    n_feat = int(n_feat**0.5)
+    test_data.inputs = test_data.inputs.reshape((n_elem, n_feat, n_feat, 1))
+    test_data.targets = to_categorical(test_data.targets)  
+
     history = model.fit_generator(
         generator(train_data.inputs, train_data.targets, batch_size),
         samples_per_epoch = training_size,
         validation_data = getFeaturesTargets(valid_data.inputs, valid_data.targets),
         nb_epoch = num_epochs
         )
+
+    eval_ = model.evaluate(train_data.inputs, train_data.targets)
+    for val, key in zip(eval_, model.metrics_names):
+        hyper_params[key] = val
 
     save_log_metrics(log_file_name, hyper_params, history)
     save_plot_metrics(log_file_name, history)
