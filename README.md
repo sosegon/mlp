@@ -13,6 +13,23 @@ The code in this repository is split into:
 
 Detailed instructions for setting up a development environment for the course are given in [this file](notes/environment-set-up.md). Students doing the course will spend part of the first lab getting their own environment set up.
 
+## IMPORTANT Coursework Setup
+
+For coursework 1, 2 more libraries are required which add nice progress bar functionality.
+To install them run in your conda mlp environment:
+
+```conda install -c conda-forge ipywidgets```
+
+and
+
+```conda install tqdm```
+
+Then your ipython notebook should be able to produce progress bar for your training and validation phases.
+
+If you get javascript errors try running the following command in the terminal and restarting the notebook:
+
+```jupyter nbextension enable --py --sys-prefix widgetsnbextension```
+
 ## Frequent Issues/Solutions
 
 Don’t forget that from your /mlpractica/l folder you should first do 
